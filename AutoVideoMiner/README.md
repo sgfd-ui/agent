@@ -1,60 +1,65 @@
 # AutoVideoMiner
 
-A LangGraph-oriented multi-agent architecture skeleton for:
+LangGraph-style multi-agent skeleton for automated event mining.
 
-- PlannerAgent → keyword generation with history avoidance
-- CrawlerAgent → dynamic DOM crawling with HITL fallback
-- EvaluatorAgent → quality gate + search history persistence
-- AnalyzerAgent → split/merge event video segments
-- ExplorerAgent → event summary and category upsert
+## Core topology
+
+`START -> CheckTimeNode`
+
+- 超时/停机：优雅流转到 `END`，并将最近日志写入 `data/logs/task_summary.md` 快照。
+- 未超时：进入 `PlannerNode`。
+
+Map-Reduce 扇出：
+
+- `PlannerNode` 输出任务列表（platform + keyword）。
+- 每个任务进入 `CrawlerSubGraph`：
+  - `CrawlerNode`（网页抓取）
+  - `EmbeddingFilterNode`（相似度阈值 0.6）
+  - `EvaluatorNode`（图文复检）
+  - 失败且 `retry_count < 3`：带建议回到 `CrawlerNode` 重试
+  - 成功：`DownloadTool` 落盘，路径汇总到 `GlobalState`
+
+扇入后串联：
+
+- `AnalyzerNode` 切分
+- `ExplorerNode` 入库
+- 回到 `CheckTimeNode` 继续循环
+
+## GUI 交互规范
+
+### 左侧边栏
+
+- 输入：场景目标（例如：`室外 监控`）
+- 输入：定时窗口滑块（09:00 - 18:00）
+- 操作：`一键启动` / `优雅停机 (Graceful Stop)`
+
+### 右侧主区域
+
+- Top 卡片：当日收集视频数、Token 消耗预估
+- 数据大屏：`event_categories` 热门事件排行柱状图
+- 终端日志流：展示 Agent 过程日志
+
+### HITL 接管
+
+- 后台线程轮询 `graph.get_state()`
+- 若捕获 `next == "ask_human"`，显示接管面板
+- 人类输入指令后调用 `graph.update_state()` 恢复流转
 
 ## Bedrock initialization
 
-All model initialization is centralized in `app/llm.py`:
+Centralized in `app/llm.py`:
 
 - `ChatBedrock`: `amazon.nova-lite-v1:0`
 - `BedrockEmbeddings`: `amazon.titan-embed-text-v1`
 
-Both share one `bedrock-runtime` boto3 client created by `init_bedrock()`.
-
-## 本地运行准备（改为依赖形式 FFmpeg）
-
-### 1) FFmpeg（通过 Python 依赖提供）
-
-`AnalyzerAgent` 使用 `VisionFFmpegTool`，依赖以下包：
-
-- `imageio-ffmpeg`（提供 FFmpeg 可执行文件）
-- `ffmpeg-python`（Python 调用接口）
-
-安装示例：
+## Dependencies
 
 ```bash
-pip install imageio-ffmpeg ffmpeg-python
+pip install -r requirements.txt
 ```
 
-> 已取消 GUI 里的本地 FFmpeg 地址选择。
-
-### 2) SQLite
-
-- Python 标准库自带 `sqlite3` 模块。
-- 项目会使用数据库文件：`data/db/autovidminer.db`。
-
-### 3) GUI 检查
-
-运行 Streamlit 后点击 **“检查运行环境”**：
-
-- 检查 FFmpeg 依赖是否可用
-- 自动创建 `data/workspace` 与 `data/db`
-
-## 快速检查
+## Quick check
 
 ```bash
 python scripts/preflight_check.py
 ```
-
-该脚本会检查：
-
-- `imageio-ffmpeg` 是否可用
-- `ffmpeg-python` 是否可用
-- `sqlite3` 模块是否可用
-- `data/workspace` 与 `data/db` 是否可写
