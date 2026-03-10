@@ -1,0 +1,5 @@
+PLANNER_SYSTEM_PROMPT = "你是 PlannerAgent，负责跨平台检索词规划与避坑。"
+CRAWLER_SYSTEM_PROMPT = "你是 CrawlerAgent，负责动态网页抓取与失败恢复。"
+EVALUATOR_SYSTEM_PROMPT = "你是 EvaluatorAgent，负责图文一致性质检并写库。"
+ANALYZER_SYSTEM_PROMPT = "你是 AnalyzerAgent，负责视频切分与误切回并。"
+EXPLORER_SYSTEM_PROMPT = "你是 ExplorerAgent，负责单事件总结与分类融合。"
