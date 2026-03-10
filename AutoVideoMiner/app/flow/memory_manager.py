@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,21 +25,6 @@ class MemoryManager:
         evicted = messages[: -self.window_size]
         return keep, evicted
 
-    def compress_logs(self, evicted: list[dict[str, Any]]) -> str:
-        if not evicted:
-            return ""
-        snippets = [str(item.get("content", item)) for item in evicted[-3:]]
-        return " | ".join(snippets)[:400]
-
     def append_mid_memory(self, compressed_summary: str) -> None:
-        if not compressed_summary:
-            return
         with self.md_summary_path.open("a", encoding="utf-8") as f:
             f.write(f"\n- {compressed_summary}\n")
-
-    def save_shutdown_snapshot(self, logs: list[str]) -> None:
-        stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with self.md_summary_path.open("a", encoding="utf-8") as f:
-            f.write(f"\n## graceful-stop @ {stamp}\n")
-            for line in logs[-20:]:
-                f.write(f"- {line}\n")

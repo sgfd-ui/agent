@@ -2,26 +2,16 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Any
+
+import ffmpeg
+import imageio_ffmpeg
 
 
 class VisionFFmpegTool:
     """FFmpeg wrapper using python dependencies instead of manual local path config."""
 
     def __init__(self) -> None:
-        self.ffmpeg, self.ffmpeg_bin = self._load_deps()
-
-    @staticmethod
-    def _load_deps() -> tuple[Any, str]:
-        try:
-            import ffmpeg
-        except ModuleNotFoundError as exc:
-            raise RuntimeError("missing dependency: ffmpeg-python") from exc
-        try:
-            import imageio_ffmpeg
-        except ModuleNotFoundError as exc:
-            raise RuntimeError("missing dependency: imageio-ffmpeg") from exc
-        return ffmpeg, imageio_ffmpeg.get_ffmpeg_exe()
+        self.ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
 
     def is_available(self) -> bool:
         return bool(self.ffmpeg_bin)
@@ -36,13 +26,16 @@ class VisionFFmpegTool:
         return result.stdout.splitlines()[0] if result.stdout else "unknown"
 
     def segment(self, video_path: str, scene_threshold: float = 0.1) -> list[str]:
+        """Split video into one placeholder segment via ffmpeg-python dependency pipeline."""
         source = Path(video_path)
         if not source.exists():
             raise FileNotFoundError(f"输入视频不存在: {video_path}")
 
         output = source.with_suffix(source.suffix + ".event_001.mp4")
+
+        # Placeholder transcode operation to validate dependency-based ffmpeg invocation.
         (
-            self.ffmpeg.input(str(source))
+            ffmpeg.input(str(source))
             .output(str(output), c="copy")
             .overwrite_output()
             .run(cmd=self.ffmpeg_bin, quiet=True)

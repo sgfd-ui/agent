@@ -1,11 +1,10 @@
-from app.flow.graph import build_graph, run_cycle
+from app.flow.graph import build_graph
 
 
 def main() -> None:
     """AutoVideoMiner entrypoint."""
-    runtime = build_graph()
-    state = run_cycle(runtime)
-    print("Graph next state:", state.get("next"))
+    graph = build_graph()
+    print("Graph initialized:", graph)
 
 
 if __name__ == "__main__":
